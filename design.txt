@@ -1,0 +1,16 @@
+Here are some design decisions and goals for the project.
+
+Python's usage of MRO to call superclass constructors is fundamentally busted IMO
+and complicates multiple inheritance a lot in common cases. In this project,
+multiple inheritance is handled by calling each required superclass __init__
+manually using pre-super syntax. It's a lot easier to write, easier to read, and
+easier to understand. MRO is still used for other superclass methods because in
+most cases it's very likely that only one superclass has a bound method
+with a specifc name.
+
+The GUI should remain as detached as possible from the core functionality and
+logic of the application. This is so it is easy to configure the application to
+run without the GUI without sacraficing any functionality e.g. "headless mode".
+Interaction between the logic and gui should be done through provided "hooks" in
+the core logic, and there should be minimal mention of or calls to anything
+GUI-related outside the GUI folder (besides the GUI entry point in the main script).

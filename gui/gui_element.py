@@ -1,9 +1,6 @@
-
-
 class GuiElement(object):
-    @classmethod
-    def init_static(cls, cron, style):
-        cls.cron = cron
+    def add_self_to_cron(self):
+        GuiElement.cron.add_job(self)
 
-    def __init__(self, **kwargs):
-        pass
+def init_gui_static(cron):
+    GuiElement.cron = cron

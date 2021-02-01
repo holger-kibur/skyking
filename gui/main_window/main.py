@@ -3,10 +3,12 @@ import tkinter.ttk as ttk
 
 from .. import gui_element
 from core import loop
+from util import funcs
 
-class AppMainWindow(ttk.Frame, gui_element.GuiElement, loop.BaseLoopJob):
+class AppMainWindow(ttk.Frame, loop.BaseLoopJob, gui_element.GuiElement):
     def __init__(self, parent):
-        super().__init__(parent=parent, interval=0.5)
+        ttk.Frame.__init__(self, parent)
+        loop.BaseLoopJob.__init__(self, 0.5)
         
         control_frame = ttk.Frame(self)
         control_frame.pack(side=tk.TOP, fill=tk.X)
@@ -23,6 +25,7 @@ class AppMainWindow(ttk.Frame, gui_element.GuiElement, loop.BaseLoopJob):
         self.context_panes = ttk.PanedWindow(self, orient=tk.VERTICAL)
         self.context_panes.pack(side=tk.TOP, fill=tk.X)
 
+        self.add_self_to_cron()
 
     def update_context_list(self):
         pass
@@ -39,7 +42,4 @@ class AppMainWindow(ttk.Frame, gui_element.GuiElement, loop.BaseLoopJob):
 
     def run(self):
         self.update_context_list()
-
-    def close(self):
-        pass
     # End BaseLoopJob overrides

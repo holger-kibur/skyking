@@ -1,10 +1,10 @@
 import time
 
 class BaseLoopJob(object):
-    def __init__(self, interval, **kwargs):
+    def __init__(self, interval):
         self.last_time = None
         self.interval = interval
-        self.signal_close = False
+        self.close_signal = False
 
     def init(self):
         raise NotImplementedError()
@@ -13,11 +13,14 @@ class BaseLoopJob(object):
         raise NotImplementedError()
 
     def close(self):
-        raise NotImplementedError()
+        self.close_signal = True
 
 class MainLoop(object):
     def __init__(self):
         self.jobs = []
+
+    def add_job(self, job):
+        self.jobs.append(job)
 
     def loop(self):
         any_closers = False
@@ -27,10 +30,13 @@ class MainLoop(object):
                 if job.last_time is None:
                     job.init()
                     job.run()
+                    job.last_time = now_time
                 elif now_time - job.last_time >= job.interval:
                     job.run()
-                job.last_time = now_time
+                    job.last_time = now_time
             for job in self.jobs:
-                any_closers = any_closers and job.signal_close
+                any_closers = any_closers or job.close_signal
+            time.sleep(0.01)
         for job in self.jobs:
-            job.close()
+            if not job.close_signal:
+                job.close()
