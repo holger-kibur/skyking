@@ -14,3 +14,16 @@ run without the GUI without sacraficing any functionality e.g. "headless mode".
 Interaction between the logic and gui should be done through provided "hooks" in
 the core logic, and there should be minimal mention of or calls to anything
 GUI-related outside the GUI folder (besides the GUI entry point in the main script).
+
+All GUI elements will have a common superclass named GuiElement where global
+information is stored. There is a fundamental disparity between the optimal design
+structure of a Tkinter GUI and the optimal design structure of a configuration
+centric application (in my opinion). In the first case, each major GUI element
+should be a self contained subclass of a tk/ttk Frame so that everything is modular
+and reusable. However, this means that any resources and properties global to all
+GUI elements need to be distributed by passing through constructors or init methods.
+With many globals, this creates a lot of bloat in constructor implementation, as
+everything needs to be passed and self-ed. Instead, store these globals in a common
+superclass definition and implement an infrastructure to make them easily available.
+
+Configurations using 

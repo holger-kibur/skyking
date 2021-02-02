@@ -1,13 +1,21 @@
 import tkinter as tk
 import time
 
-from core import loop
+from core import loop, config
 from . import gui_context, gui_element
 from .main_window import main as gui
 
 class MainGuiJob(loop.BaseLoopJob, gui_element.GuiElement):
+
+    static_config = config.StaticConfiguration(
+        update_interval = config.FloatField(default=0.05, min=0.001),
+        window_width = config.IntegerField(default=640, min=240, max=1920),
+        window_height = config.IntegerField(default=640, min=240, max=1080),
+    )
+
     def __init__(self):
-        loop.BaseLoopJob.__init__(self, 0.05)
+        gui_element.GuiElement.__init__(self)
+        loop.BaseLoopJob.__init__(self, self.config.update_interval)
         self.gui_contexts = []
         self.gui_root = None
         self.add_self_to_cron()
@@ -20,6 +28,7 @@ class MainGuiJob(loop.BaseLoopJob, gui_element.GuiElement):
         self.gui_root = tk.Tk()
         self.gui_root.title("Trading Application")
         self.gui_root.protocol("WM_DELETE_WINDOW", self.close)
+        self.gui_root.geometry("")
         gui.AppMainWindow(self.gui_root).pack(fill=tk.BOTH)
 
     def run(self):
