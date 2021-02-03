@@ -5,12 +5,12 @@ from core import loop, config
 from . import gui_context, gui_element
 from .main_window import main as gui
 
-class MainGuiJob(loop.BaseLoopJob, gui_element.GuiElement):
+class MainGuiJob(loop.BaseLoopJob, config.ConfiguredClass):
 
     static_config = config.StaticConfiguration(
-        update_interval = config.FloatField(default=0.05, min=0.001),
-        window_width = config.IntegerField(default=640, min=240, max=1920),
-        window_height = config.IntegerField(default=640, min=240, max=1080),
+        update_interval = config.FloatField(default=0.05, min_=0.001),
+        window_width = config.IntegerField(default=640, min_=240, min_=1920),
+        window_height = config.IntegerField(default=640, min_=240, min_=1080),
     )
 
     def __init__(self):
