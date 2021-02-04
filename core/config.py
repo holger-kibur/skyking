@@ -1,139 +1,53 @@
 import math
 import yaml
 
-class ConfigField(object):
-    def __init__(self, default):
-        self.set_value(default)
-        if not self.value:
-            raise ValueError("Field default isn't valid!")
+from util import funcs
 
-    def from_raw(self, raw):
-        raise NotImplementedError()
+class ConfigInstance:
+    def __init__(self, config_ref):
+        self.config_ref = config_ref
+        self.config_ref.dyn_table.append([None] * len(self.config_ref.field_keys))
+        self.table_idx = len(self.config_ref) - 1
+        self.load_defaults()
 
-    def to_raw(self):
-        raise NotImplementedError()
+    def load_defaults(self):
+        for key, field in self._config_ref.fields:
+            self.config_ref.dyn_table[self.table_idx][key] = field.default
 
-    def set_value(self, val):
-        if self.validate(val):
-            self.value = val
-
-    def get_value(self):
-        return self.value
-
-    def validate(self, val):
-        raise NotImplementedError()
-
-class IntegerField(ConfigField):
-    def __init__(self, default, min_=-math.inf, max_=math.inf):
-        super().__init__(default)
-        self.min = min_
-        self.max = max_
-
-    def from_raw(self, raw):
-        self.value = int(raw)
-
-    def to_raw(self):
-        return str(self.value)
-
-    def validate(self, val):
-        try:
-            val = int(val)
-        except ValueError:
-            return False
-        return self.min <= val <= self.max
-
-class FloatField(ConfigField):
-    def __init__(self, default, min_=-math.inf, max_=math.inf):
-        super().__init__(default)
-        self.min = min_
-        self.max = max_
-
-    def from_raw(self, raw):
-        self.value = float(raw)
-
-    def to_raw(self):
-        return str(self.value)
-
-    def validate(self, val):
-        try:
-            val = float(val)
-        except ValueError:
-            return False
-        return self.min <= val <= self.max
-
-class InstanceListField(ConfigField):
-    def __init__(self, instance_class, max_len=None):
-        super().__init__([])
-        self.iclass = instance_class
-        self.max_len = max_len
-
-    def from_raw(self, raw):
-        for instance_config in raw:
-            new_inst = self.iclass()
-            new_inst.config.update_raw(instance_config)
-            self.value.append(new_inst)
-
-    def to_raw(self):
-        raw_return = []
-        for instance in self.value:
-            raw_return.append(instance.config.serialize())
-        return raw_return
-
-    def append(self, inst):
-        if self.validate_inst(inst):
-            self.value.append(inst)
+    def __getitem__(self, key):
+        if key in self.config_ref.static.keys():
+            return self.config_ref.static[key]
+        elif key in self.config_ref.dyn_table[self.table_idx].keys():
+            return self.config_ref.dyn_table[self.table_idx][key]
         else:
-            raise ValueError("Value isn't a valid instance of", self.iclass, "!")
-    
-    def validate(self, val):
-        if type(val) is list:
-            return not any([not self.validate_inst(elm) for elm in self.value])
-        return False
+            raise KeyError("Key", key, "not in static or dynamic configuration!")
 
-    def validate_inst(self, val):
-        return type(val) is self.iclass      
+class Configuration(type):
 
-class InstanceField(InstanceListField):
-    def __init__(self, instance_class):
-        super().__init__(instance_class, max_len=1)
-         
+    _config = {}
 
-class Config(object):
-    def __init__(self, **kwargs):
-        self.fields = kwargs
+    def __init__(cls, name, bases, attribs):
+        if name != "ConfiguredClass":
+            dyn_fields = {}
+            static_fields = {}
+            static = {}
+            for key, field in attribs["cfg"]:
+                if field.static:
+                    static_fields[key] = field
+                    static[key] = field.default
+                else:
+                    dyn_fields[key] = field
+            new_cfg = {
+                "dyn_fields": dyn_fields,
+                "static_fields": static_fields,
+                "dyn_table": [],
+                "static": static,
+            }
+            cls._config[attribs["cfg_name"]] = new_cfg
+        return super().__init__(cls, name, bases, attribs)
 
-    def update_raw(self, new_val_dict):
-        for key, val in new_val_dict.items():
-            if key not in self.fields.keys():
-                print("Warning: superflous field name", key)
-                continue
-            self.fields[key].from_raw(val)
+    def __call__(cls, *args, _config_inst=None, **kwargs):
+        cls._cfg_reference
 
-    def serialize(self):
-        ret_dict = {}
-        for key, val in self.fields:
-            ret_dict[key] = val.to_raw()
-        return ret_dict
-
-class ConfiguredClass(object):
-
-    static_config_table = {}
-
-    @classmethod
-    def load_global_config_file(cls, filepath):
-        with open(filepath, "r") as file_handle:
-            raw = file_handle.read()
-        glob_conf_dict = yaml.load(raw)
-        for class_key, class_config in glob_conf_dict["static"].items():
-            if key not in static_config_table.keys():
-                print("Warning: superflous class key in static config file", filepath, ":", key)
-                continue
-            cls.static_config_table[class_key].update_raw(class_config)
-
-    @classmethod
-    def store_global_config_file(cls, filepath):
-        
-
-    def __init__(self):
-        cls = type(self)
-        self.config = cls.static_config_table[cls.get_key()].instant(cls.cur_con)
+class ConfiguredClass(metaclass=Configuration):
+    pass
