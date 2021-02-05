@@ -18,7 +18,6 @@ class ConfigInstance:
             for key, value in self.config_ref["dyn_table"][table_idx].items():
                 deser_value = self.config_ref["dyn_fields"][key].deserialize(value)
                 self.config_ref["dyn_table"][table_idx][key] = deser_value
-        type(self).instances.append(self)
 
     def load_defaults(self):
         for key, field in self.config_ref["dyn_fields"].items():
@@ -111,19 +110,12 @@ class Configuration(type):
         for cfg_name, cfg in serialized.items():
             cls.config[cfg_name]["dyn_table"] = cfg["dyn_table"]
         for cfg_name, cfg in serialized.items():
-            for key, value in cfg["static"]:
+            for key, value in cfg["static"].items():
                 field = cls.config[cfg_name]["static_fields"][key]
-                cls.config[cfg_name]["static"][key] = field.deserialize(field)
+                cls.config[cfg_name]["static"][key] = field.deserialize(value)
 
 class ConfiguredClass(metaclass=Configuration):
-    
-    instances = []
-
-    def __init__(self, *args, **kwargs):
-        ConfiguredClass.instances.append(self)
-
-    def close_config(self):
-        self.config.close()
+    pass
 
 class ConfigField:
     def __init__(self, default, static=False):
@@ -133,8 +125,8 @@ class ConfigField:
     def serialize(self, value):
         return value
 
-    def deserialize(self, raw_value):
-        return raw_value
+    def deserialize(self, value):
+        return value
 
     def pre_process(self, value):
         return value
@@ -162,8 +154,8 @@ class DecimalField(ConfigField):
     def serialize(self, value):
         return value.to_eng_string()
 
-    def deserialize(self, raw_value):
-        return self.pre_process(raw_value)
+    def deserialize(self, value):
+        return self.pre_process(value)
 
     def pre_process(self, value):
         new_dec = decimal.Decimal(value)
@@ -185,7 +177,7 @@ class FloatField(ConfigField):
     def serialize(self, value):
         return str(value)
 
-    def deserialize(self, raw_value):
+    def deserialize(self, value):
         return float(value)
 
     def validate(self, value):
@@ -204,9 +196,6 @@ class PriceDataField(ConfigField):
     pass
 
 class InstanceListField(ConfigField):
-
-    resolve_queue = []
-
     def __init__(self, iclass, static=False):
         super().__init__(default=[], static=static)
         self.iclass = iclass
@@ -228,4 +217,16 @@ class InstanceListField(ConfigField):
         return True
 
 class InstanceField(ConfigField):
-    pass
+    def __init__(self, iclass, static=True):
+        super().__init__(default=None, static=static)
+        self.iclass = iclass
+
+    def serialize(self, value):
+        return value.config.table_idx
+
+    def deserialize(self, value):
+        Configuration.pending_config_table_idx = value
+        return self.iclass()
+
+    def validate(self, value):
+        return isinstance(value, self.iclass)

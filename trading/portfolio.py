@@ -8,7 +8,7 @@ class Portfolio(config.ConfiguredClass):
         "name": config.StringField(default="Unnamed"),
         "balance": config.DecimalField(default=0, min_=0),
         "min_liquidity": config.FloatField(default=33, min_=0, max_=100, static=True),
-        "securities": config.InstanceListField(security.Security),
+        "securities": config.InstanceListField(security.Security, static=True),
     }
 
     def __init__(self):
