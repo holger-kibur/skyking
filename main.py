@@ -1,9 +1,10 @@
-from gui import gui_element, gui_main
+from gui import gui_main
 from core import loop
+from trading import application
 
 mainloop = loop.MainLoop()
-gui_element.init_gui_static(mainloop)
 
-main_app_gui = gui_main.MainGuiJob()
+app = application.Application()
+main_app_gui = gui_main.MainGuiJob(app)
 
 mainloop.loop()

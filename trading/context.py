@@ -3,11 +3,13 @@ from . import portfolio
 
 class TradingContext(config.ConfiguredClass):
 
-    static_config = config.Config()
-    instance_config = config.Config(
-        portfolio = config.InstanceField(portfolio.Portfolio),
-    )
-
+    cfg_name = "Context"
+    cfg = {
+        "portfolio": config.InstanceField(portfolio.Portfolio),
+        "friend_name": config.StringField(default="Unnamed Context"),
+        "broker_name": config.StringField(default="Unnamed Broker"),
+    }
+    
     def __init__(self):
-        config.ConfiguredClass.__init__(self)
-        if 
+        super().__init__()
+        

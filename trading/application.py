@@ -3,12 +3,13 @@ from . import context
 
 class Application(config.ConfiguredClass):
 
-    static_config = config.Config(
-        contexts = config.InstanceListField(context.TradingContext)
-    )
+    cfg_name = "Application"
+    cfg = {
+        "contexts": config.InstanceListField(context.TradingContext, static=True)
+    }
 
     def __init__(self):
-        config.ConfiguredClass.__init__(self)
+        super().__init__()
 
-    def new_context(self):
-        self.config.contexts.append(context.TradingContext())
+    def create_context(self):
+        self.conf["contexts"].append(context.TradingContext())

@@ -50,9 +50,20 @@ class ConfigInstance:
             raise ValueError("Value", val, "is not valid for field", field)
         table[key] = field.pre_process(val)
 
+class ConfigAlias:
+    def __init__(self, config_ref, table_idx):
+        self.config_ref = config_ref
+        self.table_idx = table_idx
+
+    def __getitem__(self, key):
+        return ConfigInstance.__getitem__(self, key)
+
+    def __setitem__(self, key, val):
+        ConfigInstance.__setitem__(self, key, val)
+
 class Configuration(type):
 
-    config = {}
+    _config = {}
     pending_config_table_idx = None
 
     def __init__(cls, name, bases, attribs):
@@ -72,21 +83,13 @@ class Configuration(type):
                 "dyn_table": [],
                 "static": static,
             }
-            cls.config[attribs["cfg_name"]] = new_cfg
+            cls._config[attribs["cfg_name"]] = new_cfg
         return super().__init__(name, bases, attribs)
-
-    def __call__(cls, *args, **kwargs):
-        new_subcls_inst = super().__call__(*args, **kwargs)
-        new_subcls_inst.config = ConfigInstance(Configuration.config[cls.cfg_name],
-            table_idx = Configuration.pending_config_table_idx,
-        )
-        Configuration.pending_config_table_idx = None
-        return new_subcls_inst
 
     @classmethod
     def store_to_file(cls, filepath):
         serialized = {}
-        for cfg_name, cfg in cls.config.items():
+        for cfg_name, cfg in cls._config.items():
             ser_serial = {}
             for key, value in cfg["static"].items():
                 ser_serial[key] = cfg["static_fields"][key].serialize(value)
@@ -108,14 +111,32 @@ class Configuration(type):
         with open(filepath, "r") as file_handle:
             serialized = json.loads(file_handle.read())
         for cfg_name, cfg in serialized.items():
-            cls.config[cfg_name]["dyn_table"] = cfg["dyn_table"]
+            cls._config[cfg_name]["dyn_table"] = cfg["dyn_table"]
         for cfg_name, cfg in serialized.items():
             for key, value in cfg["static"].items():
-                field = cls.config[cfg_name]["static_fields"][key]
-                cls.config[cfg_name]["static"][key] = field.deserialize(value)
+                field = cls._config[cfg_name]["static_fields"][key]
+                cls._config[cfg_name]["static"][key] = field.deserialize(value)
+
+    @classmethod
+    def get_num_instances(cls, iclass):
+        return len(cls._config[iclass.cfg_name]["dyn_table"])
+
+    @classmethod
+    def get_instance_alias(cls, iclass, index):
+        return ConfigAlias(cls._config[iclass.cfg_name], index)
+
+def glob_config_get_instances(iclass):
+    return Configuration.get_num_instances(iclass)
+
+def glob_get_instance_alias(iclass, index):
+    return Configuration.get_instance_alias(iclass, index)
 
 class ConfiguredClass(metaclass=Configuration):
-    pass
+    def __init__(self):
+        self.conf = ConfigInstance(Configuration._config[type(self).cfg_name],
+            table_idx = Configuration.pending_config_table_idx,
+        )
+        Configuration.pending_config_table_idx = None
 
 class ConfigField:
     def __init__(self, default, static=False):
@@ -183,6 +204,21 @@ class FloatField(ConfigField):
     def validate(self, value):
         return isinstance(value, float) and self.min <= value <= self.max
 
+class IntegerField(ConfigField):
+    def __init__(self, min_=-math.inf, max_=math.inf, **kwargs):
+        super().__init__(**kwargs)
+        self.min = min_
+        self.max = max_
+
+    def serialize(self, value):
+        return str(value)
+
+    def deserialize(self, value):
+        return int(value)
+
+    def validate(self, value):
+        return isinstance(value, int) and self.min <= value <= self.max
+
 class TickerField(StringField):
     def validate(self, value):
         if not super().validate(value):
@@ -203,7 +239,7 @@ class InstanceListField(ConfigField):
     def serialize(self, value):
         ser_list = []
         for instance in value:
-            ser_list.append(instance.config.table_idx)
+            ser_list.append(instance.conf.table_idx)
         return ser_list
     
     def deserialize(self, value):
@@ -222,7 +258,7 @@ class InstanceField(ConfigField):
         self.iclass = iclass
 
     def serialize(self, value):
-        return value.config.table_idx
+        return value.conf.table_idx
 
     def deserialize(self, value):
         Configuration.pending_config_table_idx = value
