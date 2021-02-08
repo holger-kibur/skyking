@@ -19,6 +19,7 @@ class ContextPaneFrame(ttk.Frame, loop.BaseLoopJob, config.ConfiguredClass):
         self.friend_name_label.grid(row=0, column=0)
         self.broker_name_label = ttk.Label(self)
         self.broker_name_label.grid(row=0, column=1)
+        
         self.add_self_to_cron()
 
     def run(self):

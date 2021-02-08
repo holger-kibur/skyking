@@ -231,6 +231,10 @@ class TickerField(StringField):
 class PriceDataField(ConfigField):
     pass
 
+class ListField(ConfigField):
+    def __init__(self, max_len, **kwargs):
+        self.max_len = max_len
+
 class InstanceListField(ConfigField):
     def __init__(self, iclass, static=False):
         super().__init__(default=[], static=static)
@@ -266,3 +270,13 @@ class InstanceField(ConfigField):
 
     def validate(self, value):
         return isinstance(value, self.iclass)
+
+class BooleanField(ConfigField):
+    def serialize(self, value):
+        return str(value)
+    
+    def deserialize(self, value):
+        return bool(value)
+
+    def validate(self, value):
+        return isinstance(value, bool)
